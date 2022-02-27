@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Calculator - React Professional</title>
+
+  <style>
+
+     html {
+       box-sizing: border-box;
+     }
+
+     *, *::before, *::after {
+       box-sizing: inherit;
+     }
+
+      body {
+        margin: 0;
+        background-color: #121212;
+        font-family: sans-serif;
+      }
+
+      .header {
+        background-color: #333;
+        text-align: center;
+        color: #fff;
+        padding: 16px;
+        border-radius: 4px;
+      }
+
+      .calculator {
+        background-color: #fff;
+        margin: 40px auto;
+        max-width: 400px;
+        padding: 16px;
+        border-radius: 4px;
+      }
+
+      .display {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1.2em;
+      }
+
+      .keyboard {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-top: 16px;
+      }
+      
+      button {
+        border: 0;
+        border-radius: 4px;
+        background-color: #efefef;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      .span2 {
+        grid-column: span 2;
+      }
+
+      button.primary {
+        background-color: #ffeec2;
+        color: #c49023;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .history {
+        padding: 0 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        height: 100px;
+        overflow-y: scroll;
+        margin-bottom: 8px;
+        text-align: right;
+      }
+  </style>
+</head>
+<body>
+
+	<div id="root"></div>
+
+	<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+	<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+	<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+	<script type="text/babel">
+
+    const calcRegex = /^([0-9]| - |\+|\*|\/|\.|\(|\))*$/
+
+    const keyboards = [
+      7, 8, 9, "/", "C",
+      4, 5, 6, "*", "Del",
+      1, 2, 3, "-", "Ad",
+      0, ".", "+", "="
+    ]
+
+    const advancedKeyboards = [
+      '(', ')', 'Hist', 'Up', 'AC'
+    ]
+
+    const Header = () => <div className="header">Calculator</div>
+    
+    const Calculator = () => {
+      
+      const [display, setDisplay] = React.useState("")
+      const [showAd, setShowAd] = React.useState(true)
+      const [history, setHistory] = React.useState([])
+      const [showHistory, setShowHistory] = React.useState(false)
+      const [error, setError] = React.useState('')
+
+      const historyRef = React.useRef(null)
+
+      React.useEffect(() => {
+         if(error){
+           setError('')
+         }
+      }, [display])
+
+      React.useEffect(() => {
+
+        if(history.length > 2 && showHistory) {          
+          historyRef.current.scrollTop = historyRef.current.scrollHeight
+        }
+
+      }, [history.length, showHistory])
+
+      const doTheMath = () => {
+
+        try {
+          const expression = display
+          const result = `${eval(display)}`
+
+          setHistory([...history, { expression, result}])
+          setDisplay(result)
+        } catch (err) {
+          setError(`Invalid expression: ${err.message}`)          
+        }
+
+      }
+      
+      const handleClick = (value) => {
+        switch (value) {
+          case "=":
+            doTheMath()
+            break
+          case "C":
+            setDisplay('')
+            break
+          case "Del":
+            setDisplay(display.substring(0, display.length - 1))
+            break
+          case "Ad":
+            setShowAd(!showAd)
+            setShowHistory(false)
+            break
+          case "Hist":
+            setShowHistory(!showHistory)
+            break
+          case "AC":
+            setHistory([])
+            setDisplay('')
+            break
+          case "Up":
+            const lastIndex = history.length - 1
+
+            if(lastIndex > -1) {
+              const newDisplay = history[lastIndex].expression
+              const newHistory = history.slice(0, lastIndex)
+        
+              setDisplay(newDisplay)
+              setHistory(newHistory)
+            }
+            break
+          default:
+            setDisplay(`${display}${value}`)
+            break
+        }
+
+      }
+
+      const handleChange = ({ target }) => {
+        const { value } = target
+        
+        if(!calcRegex.test(value)) return
+
+        setDisplay(`${value}`)
+      }
+      
+      const handleKeyPress = (event) => {
+        
+        if(event.key === 'Enter'){
+          doTheMath()
+        }
+        else if (event.key.toLowerCase() === 'c') {
+          setDisplay('')
+        }
+      }
+
+      const Button = ({ onClick, value }) => {
+        const primaryClass = isNaN(value) ? 'primary' : ''
+        const span2Class = value === 0 ? 'span2' : ''
+        
+        return (
+          <button
+            className={`${primaryClass} ${span2Class}`} 
+            onClick={ () => onClick(value)}
+          >
+            {value}
+          </button>
+        )
+      }
+
+      const renderKeyboards = (keyboards) => keyboards.map( (value, index) => (
+        <Button key={index} value={value} onClick={handleClick} />
+      ))
+    
+      const renderHistory = () =>
+        showHistory && (
+          <div ref={historyRef} className="history">
+            { history.map( ({expression, result }, index) => (
+              <p key={index}>{`${expression} = ${result}`}</p>
+            ))}
+          </div>
+        )
+      
+      return (
+        <div className="calculator">
+          {renderHistory()}
+          <input 
+            className="display"
+            type="text"
+            value={display}
+            onChange={handleChange}
+            onKeyPress={handleKeyPress}
+          />
+          { error && ( 
+            <p className="error">{error}</p>
+          )}
+          <div className="keyboard">
+            { showAd && renderKeyboards(advancedKeyboards)}
+            {renderKeyboards(keyboards)}
+          </div>
+        </div>
+      )
+    }
+
+		const App = () => (
+			<>
+        <Header />
+        <Calculator />
+			</>
+		)
+		
+		ReactDOM.render(
+      <>
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      </>,
+			document.getElementById("root")
+		)
+		
+	</script>
+</body>
+</html>
